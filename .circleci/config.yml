@@ -16,7 +16,7 @@ jobs:
       - run:
           name: Start Local HTTP Server
           command: |
-            cd $CIRCLE_WORKING_DIRECTORY
+            cd src/main/resources
             python3 -m http.server 8080 &
 
       - run:
@@ -35,3 +35,10 @@ jobs:
       - run:
           name: Stop LambdaTest Tunnel
           command: pkill LT || true
+
+# 🔹 This workflow tells CircleCI to run the job
+workflows:
+  version: 2
+  test-workflow:
+    jobs:
+      - test-local-html
