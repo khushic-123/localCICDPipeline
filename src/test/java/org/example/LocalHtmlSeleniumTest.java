@@ -16,22 +16,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LocalHtmlSeleniumTest {
 
-
     @Test
     public void testLocalHtml() throws Exception {
         // 1️⃣ LambdaTest credentials from environment
         String username = System.getenv("LT_USERNAME");
         String accessKey = System.getenv("LT_ACCESS_KEY");
         if (username == null || accessKey == null) {
-            // This error check is good, but the fix was in the YML file.
             throw new IllegalStateException("Please set LT_USERNAME and LT_ACCESS_KEY in CircleCI environment variables");
         }
 
-        // 2️⃣ Local HTML page URL (must match the Python server port)
-        String testUrl = "http://localhost:5500/index.html";
+        // 2️⃣ Local HTML page URL (***CRITICAL FIX HERE***)
+        // Use localhost.lambdatest.com so the LambdaTest grid routes traffic
+        // through the secure tunnel back to the CircleCI Docker container.
+        String testUrl = "http://localhost.lambdatest.com:5500/index.html";
 
-        // 3️⃣ LambdaTest hub URL (Using Basic Auth in URL)
-        // This is the correct way to pass credentials in the Java code.
+        // 3️⃣ LambdaTest hub URL
         String hubUrl = "https://" + username + ":" + accessKey + "@hub.lambdatest.com/wd/hub";
 
         // 4️⃣ Standard Chrome options
@@ -46,8 +45,8 @@ public class LocalHtmlSeleniumTest {
         ltOptions.put("browserName","chrome");
         ltOptions.put("platformName", "Windows 11");
         ltOptions.put("browserVersion", "latest");
-        ltOptions.put("tunnel", true);                   // REQUIRED: Enable tunnel
-        ltOptions.put("tunnelName", "myLocalTunnel");    // REQUIRED: Match name in config.yml
+        ltOptions.put("tunnel", true);                   // Enable tunnel
+        ltOptions.put("tunnelName", "myLocalTunnel");    // Match name in config.yml
         ltOptions.put("build", "CircleCI - Local HTML");
         ltOptions.put("name", "Local HTML Test");
         ltOptions.put("w3c", true);
@@ -62,12 +61,12 @@ public class LocalHtmlSeleniumTest {
         try {
             System.out.println("⏳ Waiting for page to load via tunnel: " + testUrl);
 
-            // 7️⃣ Wait until page title is available
+            // 7️⃣ Open local HTML page (this is where the test timed out before)
+            driver.get(testUrl);
+
+            // 8️⃣ Wait until page title is available
             new WebDriverWait(driver, Duration.ofSeconds(60))
                     .until((ExpectedCondition<Boolean>) d -> d.getTitle() != null && !d.getTitle().isEmpty());
-
-            // 8️⃣ Open local HTML page
-            driver.get(testUrl);
 
             // 9️⃣ Validate page title
             String title = driver.getTitle();

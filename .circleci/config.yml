@@ -2,13 +2,11 @@ version: 2.1
 
 jobs:
   maven-test:
-    # 1. Correct image with Java 17 and pre-installed browsers
     docker:
       - image: cimg/openjdk:17.0-browsers
 
-    # ❌ IMPORTANT: Removed the redundant 'environment' block.
-    #    LT_USERNAME and LT_ACCESS_KEY must be set in the CircleCI UI/Context
-    #    and are now automatically available as shell variables.
+    # ❌ FIX 1: Removed the redundant 'environment' block.
+    # LT_USERNAME and LT_ACCESS_KEY must be set in the CircleCI UI/Context.
 
     steps:
       - checkout
@@ -28,7 +26,6 @@ jobs:
               exit 1
             fi
 
-      # ✅ DEBUG STEP: Use this to ensure your secrets are loaded.
       - run:
           name: Debug LT credentials
           command: |
@@ -39,8 +36,8 @@ jobs:
           name: Start Local HTTP Server
           command: |
             echo "🚀 Starting local server on port 5500..."
-            python3 -m http.server 5500 &
-            # Wait briefly for the Python server process to start
+            # ✅ FIX 2: Explicitly bind to 0.0.0.0 for reachability inside Docker container
+            python3 -m http.server 5500 --bind 0.0.0.0 & 
             sleep 2
             echo "✅ Local server started."
 
@@ -53,14 +50,13 @@ jobs:
             chmod +x LT
             
             echo "🚇 Starting LambdaTest Tunnel..."
-            # Start tunnel in the background
+            # ✅ FIX 3: Added --sshConnType over_443 and start in background
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose --sshConnType over_443 > lt.log 2>&1 &
             
-            # 💡 FIX: Give the tunnel binary a moment to start the process and logging
-            sleep 5 
+            # 💡 FIX 4: Small initial pause for logging to start
+            sleep 5
             
             echo "⏳ Waiting for tunnel to connect..."
-            
             TIMEOUT=90
             for i in $(seq 1 $TIMEOUT); do
               # Check for the key phrase in the log file
@@ -73,23 +69,18 @@ jobs:
               if [ $i -eq $TIMEOUT ]; then
                 echo "❌ Tunnel failed to connect within $TIMEOUT seconds."
                 tail -n 30 lt.log
-                # If the loop times out, exit with an error code
                 exit 1
               fi
             done
-            
-            # Log preview to confirm successful startup message
             echo "✅ Tunnel log preview (Successful):"
             tail -n 30 lt.log
 
       - run:
           name: Run Maven tests
-          # Assuming you have the correct dependencies in pom.xml
           command: mvn -B clean test
 
       - run:
           name: Stop LambdaTest Tunnel
-          # Use pkill and verify it stopped for reliable cleanup
           command: |
             echo "🛑 Stopping LambdaTest Tunnel..."
             pkill LT || true 
@@ -110,9 +101,6 @@ workflows:
   test-workflow:
     jobs:
       - maven-test
-
-
-
 
 
 
