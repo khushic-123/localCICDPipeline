@@ -2,6 +2,7 @@ package org.example;
 
 
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
@@ -13,21 +14,35 @@ public class LocalHtmlSeleniumTest {
     @Test
     public void testLocalHtml() throws Exception {
 
+
         String username = System.getenv("LT_USERNAME");
         String accessKey = System.getenv("LT_ACCESS_KEY");
 
-        DesiredCapabilities capabilities = new DesiredCapabilities();
+        // General browser capabilities
+        MutableCapabilities capabilities = new MutableCapabilities();
         capabilities.setCapability("browserName", "Chrome");
-        capabilities.setCapability("version", "latest");
-        capabilities.setCapability("platform", "Windows 11");
-        capabilities.setCapability("tunnel", true);
-        capabilities.setCapability("tunnelName", "myLocalTunnel");
+        capabilities.setCapability("browserVersion", "latest");
 
-        String gridUrl = "https://" + username + ":" + accessKey + "@hub.lambdatest.com/wd/hub";
+        // LambdaTest-specific options
+        MutableCapabilities ltOptions = new MutableCapabilities();
+        ltOptions.setCapability("username", username);
+        ltOptions.setCapability("accessKey", accessKey);
+        ltOptions.setCapability("tunnel", true);
+        ltOptions.setCapability("tunnelName", "myLocalTunnel");
+        ltOptions.setCapability("w3c", true);
+        ltOptions.setCapability("build", "Local HTML Build");
+        ltOptions.setCapability("name", "Local HTML Test");
 
-        WebDriver driver = new RemoteWebDriver(new URL(gridUrl), capabilities);
+        // Attach LambdaTest options
+        capabilities.setCapability("LT:Options", ltOptions);
 
-        driver.get("http://localhost:8080/index.html"); // Access local HTML page via tunnel
+        // Create RemoteWebDriver instance
+        RemoteWebDriver driver = new RemoteWebDriver(
+                new URL("https://hub.lambdatest.com/wd/hub"), capabilities
+        );
+
+        // Open your local page via tunnel
+        driver.get("http://localhost:8080/index.html");
         System.out.println("Page Title: " + driver.getTitle());
 
         driver.quit();
