@@ -20,7 +20,6 @@ jobs:
             echo "Waiting for server to start..."
             sleep 15  # Give enough time for the server
 
-      # Start LambdaTest Tunnel
       - run:
           name: Start LambdaTest Tunnel
           command: |
@@ -28,9 +27,7 @@ jobs:
             unzip LT_Linux.zip
             chmod +x LT
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
-            echo "Waiting for tunnel to connect..."
-            sleep 25
-            ./LT --status
+            sleep 25  # wait for tunnel to be ready
 
       # Run Selenium tests
       - run:
