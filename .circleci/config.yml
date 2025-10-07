@@ -3,16 +3,9 @@ version: 2.1
 jobs:
   maven-test:
     docker:
-      - image: cimg/openjdk:17.0
+      - image: cimg/openjdk:17.0-browsers
     steps:
       - checkout
-
-      # Install dependencies
-      - run:
-          name: Install Dependencies
-          command: |
-            sudo apt-get update -y
-            sudo apt-get install -y python3 unzip wget maven
 
       - restore_cache:
           keys:
@@ -65,6 +58,7 @@ workflows:
   test-workflow:
     jobs:
       - maven-test
+
 
 
 
