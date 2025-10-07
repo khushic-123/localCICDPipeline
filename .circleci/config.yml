@@ -15,7 +15,10 @@ jobs:
       # Start Local HTML server
       - run:
           name: Start Local HTTP Server
-          command: python3 -m http.server 8080 &
+          command: |
+            # If index.html is in repo root
+            python3 -m http.server 8080 &
+            sleep 5
 
       # Start LambdaTest Tunnel
       - run:
@@ -30,7 +33,7 @@ jobs:
       # Run Selenium tests
       - run:
           name: Run Maven tests
-          command: mvn clean test
+          command: mvn -B clean test
 
       # Stop LambdaTest Tunnel
       - run:
