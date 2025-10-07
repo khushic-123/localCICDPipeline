@@ -26,7 +26,11 @@ jobs:
               echo "❌ index.html not found in root!"
               exit 1
             fi
-
+      - run:
+          name: Debug LT credentials
+          command: |
+            echo "LT_USERNAME is $LT_USERNAME"
+            echo "LT_ACCESS_KEY is $LT_ACCESS_KEY"
       - run:
           name: Start Local HTTP Server
           command: |
@@ -45,7 +49,7 @@ jobs:
             echo "🚇 Starting LambdaTest Tunnel..."
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose > lt.log 2>&1 &
             echo "⏳ Waiting for tunnel to connect..."
-            sleep 40
+            sleep 60
             echo "✅ Tunnel log preview:"
             tail -n 20 lt.log
 
