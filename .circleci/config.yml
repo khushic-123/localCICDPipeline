@@ -16,9 +16,9 @@ jobs:
       - run:
           name: Start Local HTTP Server
           command: |
-            # If index.html is in repo root
             python3 -m http.server 8080 &
-            sleep 5
+            echo "Waiting for server to start..."
+            sleep 15  # Give enough time for the server
 
       # Start LambdaTest Tunnel
       - run:
@@ -28,7 +28,9 @@ jobs:
             unzip LT_Linux.zip
             chmod +x LT
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
-            sleep 20
+            echo "Waiting for tunnel to connect..."
+            sleep 25
+            ./LT --status
 
       # Run Selenium tests
       - run:
@@ -59,6 +61,7 @@ workflows:
   test-workflow:
     jobs:
       - maven-test
+
 
 
 
