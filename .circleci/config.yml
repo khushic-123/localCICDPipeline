@@ -5,7 +5,7 @@ jobs:
     docker:
       - image: cimg/openjdk:17.0-browsers
 
-    # LT_USERNAME and LT_ACCESS_KEY are still expected from the CircleCI UI/Context.
+    # LT_USERNAME and LT_ACCESS_KEY must be set in the CircleCI UI/Context.
 
     steps:
       - checkout
@@ -35,17 +35,18 @@ jobs:
           name: Start Local HTTP Server (Using 'serve')
           command: |
             echo "🛠️ Installing 'serve' for stable HTTP server..."
-            # CRITICAL FIX: Add 'sudo' to gain permissions for global installation
+            # FIX: Use sudo for global npm install permissions
             sudo npm install -g serve
             
             echo "🚀 Starting 'serve' on port 5500..."
-            # The 'serve' command itself does NOT need sudo to run
+            # Use 'serve' on the default interface for stability
             serve -l 5500 -s . > serve.log 2>&1 &
             
             # Wait for the server to spin up
             sleep 5
             
-            echo "Verifying local server access..."
+            echo "Verifying local server access (must return 200 OK):"
+            # Curl 127.0.0.1 to check local reachability
             curl -I http://127.0.0.1:5500/index.html
             
             echo "✅ Local server started."
@@ -59,7 +60,7 @@ jobs:
             chmod +x LT
             
             echo "🚇 Starting LambdaTest Tunnel..."
-            # Added --sshConnType over_443 and start in background
+            # FIX: Added --sshConnType over_443 for firewall compatibility
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose --sshConnType over_443 > lt.log 2>&1 &
             
             sleep 5 # Small initial pause for logging to start
@@ -67,6 +68,7 @@ jobs:
             echo "⏳ Waiting for tunnel to connect..."
             TIMEOUT=90
             for i in $(seq 1 $TIMEOUT); do
+              # Polling for the final success message
               if grep -q "You can start testing now" lt.log; then
                 echo "✅ LambdaTest Tunnel is ready after $i seconds!"
                 break
@@ -90,9 +92,10 @@ jobs:
           name: Display Test Report on Failure
           command: |
             echo "--- Displaying Surefire Error Report ---"
+            # Print the detailed XML report on failure
             cat target/surefire-reports/TEST-org.example.LocalHtmlSeleniumTest.xml || true
             echo "----------------------------------------"
-          when: always
+          when: always # Ensures this runs even if the previous step fails
 
       - run:
           name: Stop LambdaTest Tunnel and HTTP Server
@@ -100,7 +103,7 @@ jobs:
             echo "🛑 Stopping LambdaTest Tunnel..."
             pkill LT || true
             echo "🛑 Stopping HTTP Server..."
-            # CRITICAL: Kill the 'serve' process instead of the Python process
+            # FIX: Kill the 'serve' process
             pkill -f 'serve -l 5500' || true
 
       - save_cache:

@@ -15,7 +15,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LocalHtmlSeleniumTest {
-
     @Test
     public void testLocalHtml() throws Exception {
         // 1️⃣ LambdaTest credentials from environment
@@ -25,15 +24,14 @@ public class LocalHtmlSeleniumTest {
             throw new IllegalStateException("Please set LT_USERNAME and LT_ACCESS_KEY in CircleCI environment variables");
         }
 
-        // 2️⃣ Local HTML page URL (***CRITICAL FIX HERE***)
-        // Use localhost.lambdatest.com so the LambdaTest grid routes traffic
-        // through the secure tunnel back to the CircleCI Docker container.
+        // 2️⃣ Local HTML page URL (***CRITICAL FIX: Use the LambdaTest local hostname***)
+        // This is necessary for the LambdaTest grid to route the request through the tunnel.
         String testUrl = "http://localhost.lambdatest.com:5500/index.html";
 
         // 3️⃣ LambdaTest hub URL
         String hubUrl = "https://" + username + ":" + accessKey + "@hub.lambdatest.com/wd/hub";
 
-        // 4️⃣ Standard Chrome options
+        // 4️⃣ Standard Chrome options (these are fine)
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless=new");
         options.addArguments("--no-sandbox");
@@ -61,10 +59,10 @@ public class LocalHtmlSeleniumTest {
         try {
             System.out.println("⏳ Waiting for page to load via tunnel: " + testUrl);
 
-            // 7️⃣ Open local HTML page (this is where the test timed out before)
+            // 7️⃣ Open local HTML page (The connection reset was happening here before)
             driver.get(testUrl);
 
-            // 8️⃣ Wait until page title is available
+            // 8️⃣ Wait until page title is available (Requires a non-empty <title> tag in index.html)
             new WebDriverWait(driver, Duration.ofSeconds(60))
                     .until((ExpectedCondition<Boolean>) d -> d.getTitle() != null && !d.getTitle().isEmpty());
 
