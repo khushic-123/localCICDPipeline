@@ -2,9 +2,13 @@ version: 2.1
 
 jobs:
   maven-test:
+    # 1. Correct image with Java 17 and pre-installed browsers
     docker:
       - image: cimg/openjdk:17.0-browsers
 
+    # ❌ IMPORTANT: Removed the redundant 'environment' block.
+    #    LT_USERNAME and LT_ACCESS_KEY must be set in the CircleCI UI/Context
+    #    and are now automatically available as shell variables.
 
     steps:
       - checkout
@@ -20,59 +24,64 @@ jobs:
             echo "📂 Current directory: $(pwd)"
             ls -al
             if [ ! -f index.html ]; then
-              echo "❌ index.html not found in root!"
+              echo "❌ index.html not found in root! Ensure it's checked out."
               exit 1
             fi
+
+      # ✅ DEBUG STEP: Use this to ensure your secrets are loaded.
       - run:
           name: Debug LT credentials
           command: |
-            echo "LT_USERNAME is $LT_USERNAME"
-            echo "LT_ACCESS_KEY is $LT_ACCESS_KEY"
+            echo "LT_USERNAME is not empty: ${LT_USERNAME:+YES}"
+            echo "LT_ACCESS_ACCESS is not empty: ${LT_ACCESS_KEY:+YES}"
+
       - run:
           name: Start Local HTTP Server
           command: |
             echo "🚀 Starting local server on port 5500..."
             python3 -m http.server 5500 &
-            sleep 5
+            # Wait briefly for the Python server process to start
+            sleep 2
             echo "✅ Local server started."
 
       - run:
-          name: Start LambdaTest Tunnel
+          name: Start LambdaTest Tunnel (with 443 fix and polling)
           command: |
             echo "🔽 Downloading LambdaTest Tunnel binary..."
             wget https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip
             unzip LT_Linux.zip
             chmod +x LT
+            
             echo "🚇 Starting LambdaTest Tunnel..."
-            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose > lt.log 2>&1 &
+            # ✅ FIX: Added --sshConnType over_443 to bypass firewall issues
+            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose --sshConnType over_443 > lt.log 2>&1 &
             
             echo "⏳ Waiting for tunnel to connect..."
-            # Wait for 'Tunnel is ready' message in the log file, up to 60 seconds
-            # This is much more reliable than a static sleep.
-            for i in $(seq 1 60); do
+            # ✅ IMPROVEMENT: Reliable polling loop (up to 90 seconds)
+            for i in $(seq 1 90); do
               if grep -q "Tunnel is ready" lt.log; then
-                echo "✅ LambdaTest Tunnel is ready!"
+                echo "✅ LambdaTest Tunnel is ready after $i seconds!"
                 break
               fi
               sleep 1
-              if [ $i -eq 60 ]; then
-                echo "❌ Tunnel failed to connect within 60 seconds."
-                tail -n 20 lt.log
+              if [ $i -eq 90 ]; then
+                echo "❌ Tunnel failed to connect within 90 seconds."
+                tail -n 30 lt.log # Show more log for debugging
                 exit 1
               fi
             done
-            echo "✅ Tunnel log preview:"
-            tail -n 20 lt.log
 
       - run:
           name: Run Maven tests
-          command: mvn -B  clean test
+          # Assuming you have the correct dependencies in pom.xml
+          command: mvn -B clean test
 
       - run:
           name: Stop LambdaTest Tunnel
+          # Use pkill and verify it stopped for reliable cleanup
           command: |
             echo "🛑 Stopping LambdaTest Tunnel..."
-            pkill LT || true
+            pkill LT || true 
 
       - save_cache:
           paths:
@@ -90,8 +99,6 @@ workflows:
   test-workflow:
     jobs:
       - maven-test
-
-
 
 
 

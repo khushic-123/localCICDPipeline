@@ -16,38 +16,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LocalHtmlSeleniumTest {
 
+
     @Test
     public void testLocalHtml() throws Exception {
         // 1️⃣ LambdaTest credentials from environment
         String username = System.getenv("LT_USERNAME");
         String accessKey = System.getenv("LT_ACCESS_KEY");
         if (username == null || accessKey == null) {
-            throw new IllegalStateException("Please set LT_USERNAME and LT_ACCESS_KEY in environment variables");
+            // This error check is good, but the fix was in the YML file.
+            throw new IllegalStateException("Please set LT_USERNAME and LT_ACCESS_KEY in CircleCI environment variables");
         }
 
-        // 2️⃣ Local HTML page
+        // 2️⃣ Local HTML page URL (must match the Python server port)
         String testUrl = "http://localhost:5500/index.html";
 
-        // 3️⃣ LambdaTest hub URL
+        // 3️⃣ LambdaTest hub URL (Using Basic Auth in URL)
+        // This is the correct way to pass credentials in the Java code.
         String hubUrl = "https://" + username + ":" + accessKey + "@hub.lambdatest.com/wd/hub";
 
-        // 4️⃣ Chrome options (no deprecated keys at top-level)
+        // 4️⃣ Standard Chrome options
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless=new");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
 
 
-        // 5️⃣ LambdaTest options (all custom keys go here)
+        // 5️⃣ LambdaTest options (LT:Options block)
         Map<String, Object> ltOptions = new HashMap<>();
         ltOptions.put("browserName","chrome");
-        ltOptions.put("platformName", "Windows 11");      // Correct W3C key
-        ltOptions.put("browserVersion", "latest");       // Correct W3C key
-        ltOptions.put("tunnel", true);                   // Enable tunnel
-        ltOptions.put("tunnelName", "myLocalTunnel");    // Match your CircleCI tunnel
-        ltOptions.put("build", "CircleCI - Local HTML"); // Optional build name
-        ltOptions.put("name", "Local HTML Test");        // Optional test name
-        ltOptions.put("w3c", true);                      // Enforce W3C compliance
+        ltOptions.put("platformName", "Windows 11");
+        ltOptions.put("browserVersion", "latest");
+        ltOptions.put("tunnel", true);                   // REQUIRED: Enable tunnel
+        ltOptions.put("tunnelName", "myLocalTunnel");    // REQUIRED: Match name in config.yml
+        ltOptions.put("build", "CircleCI - Local HTML");
+        ltOptions.put("name", "Local HTML Test");
+        ltOptions.put("w3c", true);
 
         // Attach LambdaTest options
         options.setCapability("LT:Options", ltOptions);
@@ -69,11 +72,13 @@ public class LocalHtmlSeleniumTest {
             // 9️⃣ Validate page title
             String title = driver.getTitle();
             System.out.println("✅ Page title: " + title);
-            assertTrue(title != null && title.length() > 0, "Title should not be empty");
+            assertTrue(title != null && title.length() > 0, "Page title validation failed.");
 
         } finally {
-            driver.quit();
-            System.out.println("Driver session ended.");
+            if (driver != null) {
+                driver.quit();
+                System.out.println("Driver session ended.");
+            }
         }
     }
 }
