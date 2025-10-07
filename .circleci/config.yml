@@ -12,53 +12,73 @@ jobs:
             - maven-{{ checksum "pom.xml" }}
             - maven-
 
-      # Start Local HTML server
+      # 1. Start Local HTML server
       - run:
           name: Start Local HTTP Server
           command: |
-            # If index.html is in repo root
+            # Use 'nohup' or simple '&' to run in the background
             python3 -m http.server 8080 &
-            sleep 5
+          background: true
 
-      # Start LambdaTest Tunnel
+      # 2. WAIT for the Local HTTP Server to be READY (Crucial Fix)
+      - run:
+          name: Wait for Local Server (localhost:8080)
+          # Use 'curl' to repeatedly check for a successful HTTP connection
+          command: |
+            for i in $(seq 1 10); do
+              if curl --silent --fail http://localhost:8080/index.html; then
+                echo "Local HTTP Server is UP and READY!"
+                exit 0
+              fi
+              echo "Waiting for local server on port 8080... (Attempt $i/10)"
+              sleep 3
+            done
+            echo "Error: Local HTTP Server failed to start or become available on localhost:8080."
+            exit 1 # Fail the build if the server never responds
+
+      # 3. Start LambdaTest Tunnel
       - run:
           name: Start LambdaTest Tunnel
           command: |
             wget https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip
             unzip LT_Linux.zip
             chmod +x LT
+            # Run the tunnel in the background
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
-            sleep 20
 
-      # Run Selenium tests
+            # Wait for the tunnel to establish the connection
+            # Tunnel startup time can vary, so 20 seconds is a decent starting point, 
+            # but a proper log check (if available) is better.
+            echo "Waiting 20 seconds for LambdaTest Tunnel to connect..."
+            sleep 20
+          background: true
+
+      # 4. Run Selenium tests
       - run:
           name: Run Maven tests
           command: mvn -B clean test
 
-      # Stop LambdaTest Tunnel
+      # 5. Stop all background processes
       - run:
-          name: Stop LambdaTest Tunnel
-          command: pkill LT || true
+          name: Stop Background Processes
+          # Use 'pkill' for both LT (if running) and python3 http.server
+          command: |
+            pkill LT || true
+            # Clean up the python server process too, if it's still running
+            pkill -f 'http.server' || true
 
-      # Save Maven cache
+      # ... (Rest of your steps for caching and artifacts)
+
       - save_cache:
           paths:
             - .m2/repository
           key: maven-{{ checksum "pom.xml" }}
 
-      # Store test results
       - store_test_results:
           path: target/surefire-reports
 
-      # Store artifacts
       - store_artifacts:
           path: target
-
-workflows:
-  version: 2
-  test-workflow:
-    jobs:
-      - maven-test
 
 
 
