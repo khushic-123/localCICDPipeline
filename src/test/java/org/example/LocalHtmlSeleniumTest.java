@@ -1,11 +1,8 @@
 package org.example;
 
-
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.MutableCapabilities;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import java.net.URL;
@@ -18,43 +15,46 @@ public class LocalHtmlSeleniumTest {
 
     @Test
     public void testLocalHtml() throws Exception {
-        // Credentials from environment
+        // 1️⃣ LambdaTest credentials from environment
         String username = System.getenv("LT_USERNAME");
         String accessKey = System.getenv("LT_ACCESS_KEY");
         if (username == null || accessKey == null) {
             throw new IllegalStateException("Please set LT_USERNAME and LT_ACCESS_KEY in environment variables");
         }
 
-        // Local HTML page served on CircleCI container
+        // 2️⃣ Local HTML page
         String testUrl = "http://localhost:8080/index.html";
 
-        // LambdaTest hub URL
+        // 3️⃣ LambdaTest hub URL
         String hubUrl = "https://" + username + ":" + accessKey + "@hub.lambdatest.com/wd/hub";
 
-        // Chrome browser options
+        // 4️⃣ Chrome options (no deprecated keys at top-level)
         ChromeOptions options = new ChromeOptions();
-        options.setCapability("browserName", "Chrome");
-        options.setCapability("browserVersion", "latest");
 
-        // LambdaTest options (W3C)
+        // 5️⃣ LambdaTest options (all custom keys go here)
         Map<String, Object> ltOptions = new HashMap<>();
-        ltOptions.put("platformName", "Windows 11");
-        ltOptions.put("tunnel", true);
-        ltOptions.put("tunnelName", "myLocalTunnel");
-        ltOptions.put("build", "CircleCI - LambdaTest Local HTML");
-        ltOptions.put("name", "Local HTML Test");
-        ltOptions.put("w3c", true);
+        ltOptions.put("platformName", "Windows 11");      // Correct W3C key
+        ltOptions.put("browserVersion", "latest");       // Correct W3C key
+        ltOptions.put("tunnel", true);                   // Enable tunnel
+        ltOptions.put("tunnelName", "myLocalTunnel");    // Match your CircleCI tunnel
+        ltOptions.put("build", "CircleCI - Local HTML"); // Optional build name
+        ltOptions.put("name", "Local HTML Test");        // Optional test name
+        ltOptions.put("w3c", true);                      // Enforce W3C compliance
 
-        // Attach LT options
+        // Attach LambdaTest options
         options.setCapability("LT:Options", ltOptions);
 
+        // 6️⃣ Create RemoteWebDriver
         WebDriver driver = new RemoteWebDriver(new URL(hubUrl), options);
 
         try {
+            // 7️⃣ Open local HTML page via tunnel
             driver.get(testUrl);
+
+            // 8️⃣ Simple assertion
             String title = driver.getTitle();
             System.out.println("Page title: " + title);
-            assertTrue(title != null && title.length() > 0);
+            assertTrue(title != null && title.length() > 0, "Title should not be empty");
         } finally {
             driver.quit();
         }
