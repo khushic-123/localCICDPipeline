@@ -1,0 +1,37 @@
+version: 2.1
+
+jobs:
+  test-local-html:
+    docker:
+      - image: cimg/openjdk:17.0
+    steps:
+      - checkout
+
+      - run:
+          name: Install Dependencies
+          command: |
+            sudo apt-get update -y
+            sudo apt-get install -y python3 unzip wget maven
+
+      - run:
+          name: Start Local HTTP Server
+          command: |
+            cd $CIRCLE_WORKING_DIRECTORY
+            python3 -m http.server 8080 &
+
+      - run:
+          name: Start LambdaTest Tunnel
+          command: |
+            wget https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip
+            unzip LT_Linux.zip
+            chmod +x LT
+            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
+            sleep 20
+
+      - run:
+          name: Run Selenium Tests
+          command: mvn test
+
+      - run:
+          name: Stop LambdaTest Tunnel
+          command: pkill LT || true
