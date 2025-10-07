@@ -24,7 +24,7 @@ public class LocalHtmlSeleniumTest {
         }
 
         // 2️⃣ Local HTML page
-        String testUrl = "http://localhost:8080/index.html";
+        String testUrl = "http://localhost:5500/index.html";
 
         // 3️⃣ LambdaTest hub URL
         String hubUrl = "https://" + username + ":" + accessKey + "@hub.lambdatest.com/wd/hub";

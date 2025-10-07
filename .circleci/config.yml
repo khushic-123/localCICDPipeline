@@ -4,6 +4,11 @@ jobs:
   maven-test:
     docker:
       - image: cimg/openjdk:17.0-browsers
+
+    environment:
+      LT_USERNAME: $LT_USERNAME
+      LT_ACCESS_KEY: $LT_ACCESS_KEY
+
     steps:
       - checkout
 
@@ -12,53 +17,63 @@ jobs:
             - maven-{{ checksum "pom.xml" }}
             - maven-
 
-      # Start Local HTML server
+      - run:
+          name: Verify index.html exists
+          command: |
+            echo "📂 Current directory: $(pwd)"
+            ls -al
+            if [ ! -f index.html ]; then
+              echo "❌ index.html not found in root!"
+              exit 1
+            fi
+
       - run:
           name: Start Local HTTP Server
           command: |
-            # If index.html is in repo root
-            python3 -m http.server 8080 &
+            echo "🚀 Starting local server on port 5500..."
+            python3 -m http.server 5500 &
             sleep 5
+            echo "✅ Local server started."
 
-      # Start LambdaTest Tunnel
       - run:
           name: Start LambdaTest Tunnel
           command: |
+            echo "🔽 Downloading LambdaTest Tunnel binary..."
             wget https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip
             unzip LT_Linux.zip
             chmod +x LT
-            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
-            sleep 20
+            echo "🚇 Starting LambdaTest Tunnel..."
+            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose > lt.log 2>&1 &
+            echo "⏳ Waiting for tunnel to connect..."
+            sleep 40
+            echo "✅ Tunnel log preview:"
+            tail -n 20 lt.log
 
-      # Run Selenium tests
       - run:
           name: Run Maven tests
           command: mvn -B clean test
 
-      # Stop LambdaTest Tunnel
       - run:
           name: Stop LambdaTest Tunnel
-          command: pkill LT || true
+          command: |
+            echo "🛑 Stopping LambdaTest Tunnel..."
+            pkill LT || true
 
-      # Save Maven cache
       - save_cache:
           paths:
             - .m2/repository
           key: maven-{{ checksum "pom.xml" }}
 
-      # Store test results
       - store_test_results:
           path: target/surefire-reports
 
-      # Store artifacts
       - store_artifacts:
           path: target
 
 workflows:
   version: 2
-  test-workflow:
-    jobs:
-      - maven-test
+  test-w
+
 
 
 
