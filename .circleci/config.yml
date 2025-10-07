@@ -36,9 +36,15 @@ jobs:
           name: Start Local HTTP Server
           command: |
             echo "🚀 Starting local server on port 5500..."
-            # ✅ FIX 2: Explicitly bind to 0.0.0.0 for reachability inside Docker container
-            python3 -m http.server 5500 --bind 0.0.0.0 & 
-            sleep 2
+            # Change to '127.0.0.1' and use an explicit nohup to keep it running reliably
+            # Note: 127.0.0.1 is safe here because the LT Tunnel client is on the same host (Docker container)
+            nohup python3 -m http.server 5500 --bind 127.0.0.1 > python_server.log 2>&1 &
+            
+            # Add a verification step to confirm the server is responsive locally
+            sleep 5
+            echo "Verifying local server access..."
+            curl -I http://127.0.0.1:5500/index.html
+            
             echo "✅ Local server started."
 
       - run:
@@ -89,10 +95,12 @@ jobs:
           when: always # IMPORTANT: Always run this step, even if the test step fails
 
       - run:
-          name: Stop LambdaTest Tunnel
+          name: Stop LambdaTest Tunnel and Python Server
           command: |
             echo "🛑 Stopping LambdaTest Tunnel..."
-            pkill LT || true 
+            pkill LT || true
+            echo "🛑 Stopping Python Server..."
+            pkill -f 'python3 -m http.server 5500' || true
 
       - save_cache:
           paths:
