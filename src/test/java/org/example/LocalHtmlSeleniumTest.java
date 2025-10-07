@@ -6,6 +6,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import java.net.URL;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,6 +31,10 @@ public class LocalHtmlSeleniumTest {
 
         // 4️⃣ Chrome options (no deprecated keys at top-level)
         ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+
 
         // 5️⃣ LambdaTest options (all custom keys go here)
         Map<String, Object> ltOptions = new HashMap<>();
@@ -47,8 +52,11 @@ public class LocalHtmlSeleniumTest {
         // 6️⃣ Create RemoteWebDriver
         WebDriver driver = new RemoteWebDriver(new URL(hubUrl), options);
 
+
         try {
             // 7️⃣ Open local HTML page via tunnel
+            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(60));
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
             driver.get(testUrl);
 
             // 8️⃣ Simple assertion
