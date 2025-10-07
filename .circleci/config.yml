@@ -72,7 +72,9 @@ jobs:
 
 workflows:
   version: 2
-  test-w
+  test-workflow:
+    jobs:
+      - maven-test
 
 
 
