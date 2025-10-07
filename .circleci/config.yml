@@ -80,6 +80,15 @@ jobs:
           command: mvn -B clean test
 
       - run:
+          name: Display Test Report on Failure
+          command: |
+            echo "--- Displaying Surefire Error Report ---"
+            # Adjust the filename pattern if needed, but this is the Maven default
+            cat target/surefire-reports/TEST-org.example.LocalHtmlSeleniumTest.xml || true
+            echo "----------------------------------------"
+          when: always # IMPORTANT: Always run this step, even if the test step fails
+
+      - run:
           name: Stop LambdaTest Tunnel
           command: |
             echo "🛑 Stopping LambdaTest Tunnel..."
