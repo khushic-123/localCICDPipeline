@@ -5,8 +5,7 @@ jobs:
     docker:
       - image: cimg/openjdk:17.0-browsers
 
-    # ❌ FIX 1: Removed the redundant 'environment' block.
-    # LT_USERNAME and LT_ACCESS_KEY must be set in the CircleCI UI/Context.
+    # LT_USERNAME and LT_ACCESS_KEY are still expected from the CircleCI UI/Context.
 
     steps:
       - checkout
@@ -33,16 +32,21 @@ jobs:
             echo "LT_ACCESS_ACCESS is not empty: ${LT_ACCESS_KEY:+YES}"
 
       - run:
-          name: Start Local HTTP Server
+          name: Start Local HTTP Server (Using 'serve')
           command: |
-            echo "🚀 Starting local server on port 5500..."
-            # Change to '127.0.0.1' and use an explicit nohup to keep it running reliably
-            # Note: 127.0.0.1 is safe here because the LT Tunnel client is on the same host (Docker container)
-            nohup python3 -m http.server 5500 --bind 127.0.0.1 > python_server.log 2>&1 &
+            echo "🛠️ Installing 'serve' for stable HTTP server..."
+            npm install -g serve
             
-            # Add a verification step to confirm the server is responsive locally
+            echo "🚀 Starting 'serve' on port 5500..."
+            # Use 'serve' (which is more robust than Python's simple server)
+            # -l 5500 sets the port, -s enables single-page application mode (safe fallback)
+            serve -l 5500 -s . > serve.log 2>&1 &
+            
+            # Wait for the server to spin up
             sleep 5
+            
             echo "Verifying local server access..."
+            # Curl 127.0.0.1 to check local reachability
             curl -I http://127.0.0.1:5500/index.html
             
             echo "✅ Local server started."
@@ -56,16 +60,14 @@ jobs:
             chmod +x LT
             
             echo "🚇 Starting LambdaTest Tunnel..."
-            # ✅ FIX 3: Added --sshConnType over_443 and start in background
+            # Added --sshConnType over_443 and start in background
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose --sshConnType over_443 > lt.log 2>&1 &
             
-            # 💡 FIX 4: Small initial pause for logging to start
-            sleep 5
+            sleep 5 # Small initial pause for logging to start
             
             echo "⏳ Waiting for tunnel to connect..."
             TIMEOUT=90
             for i in $(seq 1 $TIMEOUT); do
-              # Check for the key phrase in the log file
               if grep -q "You can start testing now" lt.log; then
                 echo "✅ LambdaTest Tunnel is ready after $i seconds!"
                 break
@@ -89,18 +91,18 @@ jobs:
           name: Display Test Report on Failure
           command: |
             echo "--- Displaying Surefire Error Report ---"
-            # Adjust the filename pattern if needed, but this is the Maven default
             cat target/surefire-reports/TEST-org.example.LocalHtmlSeleniumTest.xml || true
             echo "----------------------------------------"
-          when: always # IMPORTANT: Always run this step, even if the test step fails
+          when: always
 
       - run:
-          name: Stop LambdaTest Tunnel and Python Server
+          name: Stop LambdaTest Tunnel and HTTP Server
           command: |
             echo "🛑 Stopping LambdaTest Tunnel..."
             pkill LT || true
-            echo "🛑 Stopping Python Server..."
-            pkill -f 'python3 -m http.server 5500' || true
+            echo "🛑 Stopping HTTP Server..."
+            # CRITICAL: Kill the 'serve' process instead of the Python process
+            pkill -f 'serve -l 5500' || true
 
       - save_cache:
           paths:
@@ -118,6 +120,5 @@ workflows:
   test-workflow:
     jobs:
       - maven-test
-
 
 
