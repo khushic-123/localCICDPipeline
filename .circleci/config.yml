@@ -1,24 +1,32 @@
 version: 2.1
 
 jobs:
-  test-local-html:
+  maven-test:
     docker:
       - image: cimg/openjdk:17.0
     steps:
       - checkout
 
+      # Install dependencies
       - run:
           name: Install Dependencies
           command: |
             sudo apt-get update -y
             sudo apt-get install -y python3 unzip wget maven
 
+      - restore_cache:
+          keys:
+            - maven-{{ checksum "pom.xml" }}
+            - maven-
+
+      # Start Local HTML server
       - run:
           name: Start Local HTTP Server
           command: |
             cd src/main/resources
             python3 -m http.server 8080 &
 
+      # Start LambdaTest Tunnel
       - run:
           name: Start LambdaTest Tunnel
           command: |
@@ -28,17 +36,38 @@ jobs:
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
             sleep 20
 
+      # Run Selenium tests
       - run:
           name: Run Selenium Tests
           command: mvn test
 
+      # Stop LambdaTest Tunnel
       - run:
           name: Stop LambdaTest Tunnel
           command: pkill LT || true
 
-# 🔹 This workflow tells CircleCI to run the job
+      # Save Maven cache
+      - save_cache:
+          paths:
+            - .m2/repository
+          key: maven-{{ checksum "pom.xml" }}
+
+      # Store test results
+      - store_test_results:
+          path: target/surefire-reports
+
+      # Store artifacts
+      - store_artifacts:
+          path: target
+
 workflows:
   version: 2
   test-workflow:
     jobs:
-      - test-local-html
+      - maven-test
+
+
+
+
+
+
