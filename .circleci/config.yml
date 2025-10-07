@@ -15,8 +15,7 @@ jobs:
       # Start Local HTML server
       - run:
           name: Start Local HTTP Server
-          command: |
-            python3 -m http.server 8080 &
+          command: python3 -m http.server 8080 &
 
       # Start LambdaTest Tunnel
       - run:
@@ -30,8 +29,8 @@ jobs:
 
       # Run Selenium tests
       - run:
-          name: Run Selenium Tests
-          command: mvn test
+          name: Run Maven tests
+          command: mvn clean test
 
       # Stop LambdaTest Tunnel
       - run:
