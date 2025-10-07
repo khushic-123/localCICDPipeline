@@ -3,80 +3,57 @@ version: 2.1
 jobs:
   maven-test:
     docker:
-      - image: cimg/openjdk:17.0-browsers
-
+      - image: cimg/openjdk:17.0  # Java 17
     environment:
-      LT_USERNAME: $LT_USERNAME
-      LT_ACCESS_KEY: $LT_ACCESS_KEY
-
+      LT_USERNAME: $LT_USERNAME   # LambdaTest username from CircleCI project settings
+      LT_ACCESS_KEY: $LT_ACCESS_KEY  # LambdaTest access key from CircleCI project settings
     steps:
       - checkout
 
+      # Cache Maven dependencies
       - restore_cache:
           keys:
             - maven-{{ checksum "pom.xml" }}
             - maven-
 
+      # Install Maven
       - run:
-          name: Verify index.html exists
+          name: Install Maven
           command: |
-            echo "📂 Current directory: $(pwd)"
-            ls -al
-            if [ ! -f index.html ]; then
-              echo "❌ index.html not found in root!"
-              exit 1
-            fi
-      - run:
-          name: Debug LT credentials
-          command: |
-            echo "LT_USERNAME is $LT_USERNAME"
-            echo "LT_ACCESS_KEY is $LT_ACCESS_KEY"
-      - run:
-          name: Start Local HTTP Server
-          command: |
-            echo "🚀 Starting local server on port 5500..."
-            python3 -m http.server 5500 &
-            sleep 5
-            echo "✅ Local server started."
+            sudo apt-get update -y
+            sudo apt-get install -y maven
+            mvn -v
 
+      # Start your local server in background
+      - run:
+          name: Start Local Server
+          command: |
+            java -jar target/LocalHostWebApp-1.0-SNAPSHOT.jar &
+            sleep 10  # wait for server to start
+
+      # Download and start LambdaTest tunnel
       - run:
           name: Start LambdaTest Tunnel
           command: |
-            echo "🔽 Downloading LambdaTest Tunnel binary..."
-            wget https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip
-            unzip LT_Linux.zip
+            curl -o LT --silent https://downloads.lambdatest.com/automation/LT
             chmod +x LT
-            echo "🚇 Starting LambdaTest Tunnel..."
-            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose > lt.log 2>&1 &
-            echo "⏳ Waiting for tunnel to connect..."
-            sleep 6
-            echo "✅ Tunnel log preview:"
-            tail -n 20 lt.log
+            ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel &
+            sleep 15  # wait for tunnel to connect
 
+      # Run Maven tests
       - run:
-          name: Run Maven tests
-          command: mvn -B -Dmaven.repo.local=.m2/repository clean test
+          name: Run Maven Tests
+          command: mvn -B clean test
 
-      - run:
-          name: Stop LambdaTest Tunnel
-          command: |
-            echo "🛑 Stopping LambdaTest Tunnel..."
-            pkill LT || true
-
+      # Save Maven cache
       - save_cache:
           paths:
-            - .m2/repository
+            - ~/.m2
           key: maven-{{ checksum "pom.xml" }}
-
-      - store_test_results:
-          path: target/surefire-reports
-
-      - store_artifacts:
-          path: target
 
 workflows:
   version: 2
-  test-workflow:
+  test:
     jobs:
       - maven-test
 

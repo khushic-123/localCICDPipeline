@@ -40,6 +40,7 @@ public class LocalHtmlSeleniumTest {
 
         // 5️⃣ LambdaTest options (all custom keys go here)
         Map<String, Object> ltOptions = new HashMap<>();
+        ltOptions.put("browserName","chrome");
         ltOptions.put("platformName", "Windows 11");      // Correct W3C key
         ltOptions.put("browserVersion", "latest");       // Correct W3C key
         ltOptions.put("tunnel", true);                   // Enable tunnel
