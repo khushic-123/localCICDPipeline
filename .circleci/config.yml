@@ -42,15 +42,16 @@ jobs:
       - run:
           name: Start LambdaTest Tunnel
           command: |
+            echo "🔽 Downloading LambdaTest Tunnel binary..."
             wget https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip
             unzip LT_Linux.zip
             chmod +x LT
+            echo "🚇 Starting LambdaTest Tunnel..."
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose > lt.log 2>&1 &
             echo "⏳ Waiting for tunnel to connect..."
-            until grep -q "Tunnel connected successfully" lt.log; do
-              sleep 2
-            done
-            echo "✅ Tunnel is connected!"
+            sleep 6
+            echo "✅ Tunnel log preview:"
+            tail -n 20 lt.log
 
       - run:
           name: Run Maven tests
