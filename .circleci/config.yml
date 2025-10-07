@@ -53,23 +53,34 @@ jobs:
             chmod +x LT
             
             echo "🚇 Starting LambdaTest Tunnel..."
-            # ✅ FIX: Added --sshConnType over_443 to bypass firewall issues
+            # Start tunnel in the background
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose --sshConnType over_443 > lt.log 2>&1 &
             
+            # 💡 FIX: Give the tunnel binary a moment to start the process and logging
+            sleep 5 
+            
             echo "⏳ Waiting for tunnel to connect..."
-            # ✅ IMPROVEMENT: Reliable polling loop (up to 90 seconds)
-            for i in $(seq 1 90); do
-              if grep -q "Tunnel is ready" lt.log; then
+            
+            TIMEOUT=90
+            for i in $(seq 1 $TIMEOUT); do
+              # Check for the key phrase in the log file
+              if grep -q "You can start testing now" lt.log; then
                 echo "✅ LambdaTest Tunnel is ready after $i seconds!"
                 break
               fi
               sleep 1
-              if [ $i -eq 90 ]; then
-                echo "❌ Tunnel failed to connect within 90 seconds."
-                tail -n 30 lt.log # Show more log for debugging
+            
+              if [ $i -eq $TIMEOUT ]; then
+                echo "❌ Tunnel failed to connect within $TIMEOUT seconds."
+                tail -n 30 lt.log
+                # If the loop times out, exit with an error code
                 exit 1
               fi
             done
+            
+            # Log preview to confirm successful startup message
+            echo "✅ Tunnel log preview (Successful):"
+            tail -n 30 lt.log
 
       - run:
           name: Run Maven tests
