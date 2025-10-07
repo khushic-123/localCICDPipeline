@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.net.URL;
 import java.time.Duration;
@@ -54,17 +56,23 @@ public class LocalHtmlSeleniumTest {
 
 
         try {
-            // 7️⃣ Open local HTML page via tunnel
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(60));
-            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+            System.out.println("⏳ Waiting for page to load via tunnel: " + testUrl);
+
+            // 7️⃣ Wait until page title is available
+            new WebDriverWait(driver, Duration.ofSeconds(60))
+                    .until((ExpectedCondition<Boolean>) d -> d.getTitle() != null && !d.getTitle().isEmpty());
+
+            // 8️⃣ Open local HTML page
             driver.get(testUrl);
 
-            // 8️⃣ Simple assertion
+            // 9️⃣ Validate page title
             String title = driver.getTitle();
-            System.out.println("Page title: " + title);
+            System.out.println("✅ Page title: " + title);
             assertTrue(title != null && title.length() > 0, "Title should not be empty");
+
         } finally {
             driver.quit();
+            System.out.println("Driver session ended.");
         }
     }
 }
