@@ -5,9 +5,6 @@ jobs:
     docker:
       - image: cimg/openjdk:17.0-browsers
 
-    environment:
-      LT_USERNAME: $LT_USERNAME
-      LT_ACCESS_KEY: $LT_ACCESS_KEY
 
     steps:
       - checkout
@@ -48,8 +45,22 @@ jobs:
             chmod +x LT
             echo "🚇 Starting LambdaTest Tunnel..."
             ./LT --user $LT_USERNAME --key $LT_ACCESS_KEY --tunnelName myLocalTunnel --verbose > lt.log 2>&1 &
+            
             echo "⏳ Waiting for tunnel to connect..."
-            sleep 6
+            # Wait for 'Tunnel is ready' message in the log file, up to 60 seconds
+            # This is much more reliable than a static sleep.
+            for i in $(seq 1 60); do
+              if grep -q "Tunnel is ready" lt.log; then
+                echo "✅ LambdaTest Tunnel is ready!"
+                break
+              fi
+              sleep 1
+              if [ $i -eq 60 ]; then
+                echo "❌ Tunnel failed to connect within 60 seconds."
+                tail -n 20 lt.log
+                exit 1
+              fi
+            done
             echo "✅ Tunnel log preview:"
             tail -n 20 lt.log
 
