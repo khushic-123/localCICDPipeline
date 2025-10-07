@@ -35,18 +35,17 @@ jobs:
           name: Start Local HTTP Server (Using 'serve')
           command: |
             echo "🛠️ Installing 'serve' for stable HTTP server..."
-            npm install -g serve
+            # CRITICAL FIX: Add 'sudo' to gain permissions for global installation
+            sudo npm install -g serve
             
             echo "🚀 Starting 'serve' on port 5500..."
-            # Use 'serve' (which is more robust than Python's simple server)
-            # -l 5500 sets the port, -s enables single-page application mode (safe fallback)
+            # The 'serve' command itself does NOT need sudo to run
             serve -l 5500 -s . > serve.log 2>&1 &
             
             # Wait for the server to spin up
             sleep 5
             
             echo "Verifying local server access..."
-            # Curl 127.0.0.1 to check local reachability
             curl -I http://127.0.0.1:5500/index.html
             
             echo "✅ Local server started."
